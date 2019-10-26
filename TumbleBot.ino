@@ -40,22 +40,22 @@ void loop() {
   delay(2000);
 }
 
-// store a aggregator (process start or process end)
+
+
+// Store a aggregator (process start or process end)
 
 // Breadborad pin 13 for input
 // Purple wire goes to pin 1
 // Grey wire goes to pin 2
 
+// Bigger resistor less power it wastes but less range to measure over
 
+// LDR is 3kohms
 
-// bigger resistor less power it wastes but less range to measure over
+// LED off
+// LED on
+// Fallen off the tumble dryer
 
-// ldr is 3kohms
+// Minify html file and progmem it to program memory. Puts it iiin program memory. Then do client.write(variable name)
 
-// led off
-// led on
-// fallen off the tumble dryer
-
-// minify html file and progmem it to program memory. Puts it iiin program memory. Then do client.write(variable name)
-
-// check when the tumble dryer was last on, then if it has been more than 10 seconds, then tell me that the dryer was off
+// Check when the tumble dryer was last on, then if it has been more than 10 seconds, then tell me that the dryer was off
