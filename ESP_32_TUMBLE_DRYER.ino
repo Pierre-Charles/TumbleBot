@@ -1,8 +1,3 @@
-// Shed WiFi
-// SSID = microlab_IoT
-// KEY = 
-
-
 #include <U8x8lib.h> // OLED Display for ESP
 #include <Adafruit_PN532.h> // RFID Scanner
 
