@@ -15,6 +15,7 @@ const int rfid_scl = 22;
 int light_value = 0;
 int check_blue = digitalRead(blueLED);
 int check_red = digitalRead(redLED);
+int light_threshold = 900;
 
 void setup() {
   Serial.begin(115200);
@@ -36,7 +37,6 @@ void ISR() {
 
 void loop() {
 
-#define light_threshold 900
   light_value = analogRead(ldr);
   Serial.println(light_value);
 
@@ -55,7 +55,7 @@ void loop() {
 
   delay(2000);
 
-  if (!flag && check_blue == LOW && check_red == LOW && (analogRead(ldr) <= light_threshold)) {
+  if (!flag && (analogRead(ldr) < light_threshold)) {
     digitalWrite(greenLED, HIGH);
     Serial.println("Tumble Dryer has finished!");
   } else {
