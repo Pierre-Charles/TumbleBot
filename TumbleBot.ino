@@ -4,14 +4,23 @@
 
 U8X8_SSD1306_128X64_NONAME_SW_I2C lcd(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
 
-const int ledPin = 19;
+const int blueLED = 19;
+const int redLED = 23;
+const int greenLED = 18;
 const int vibrationSensor = 35;
-const int buttonPin = 0;
 const int ldr = 2;
+const int rfid_sda = 21;
+const int rfid_scl = 22;
+
+int light_value = 0;
+int check_blue = digitalRead(blueLED);
+int check_red = digitalRead(redLED);
 
 void setup() {
   Serial.begin(115200);
-  pinMode(ledPin, OUTPUT);
+  pinMode(blueLED, OUTPUT);
+  pinMode(redLED, OUTPUT);
+  pinMode(greenLED, OUTPUT);
   pinMode(vibrationSensor, INPUT);
   pinMode(ldr, INPUT);
   attachInterrupt(vibrationSensor, ISR, FALLING);
@@ -26,16 +35,31 @@ void ISR() {
 }
 
 void loop() {
-  Serial.println(analogRead(ldr));
+
+#define light_threshold 900
+  light_value = analogRead(ldr);
+  Serial.println(light_value);
+
   if (flag) {
     lcd.clear();
-    digitalWrite (ledPin, HIGH);
+    digitalWrite(blueLED, HIGH);
+    digitalWrite(redLED, HIGH);
     lcd.drawString(0, 0, "DRYER IS ON");
     Serial.println("DRYER IS ON");
     flag = false;
   } else {
     lcd.drawString(0, 0, "DRYER IS DONE");
-    digitalWrite (ledPin, LOW);
+    digitalWrite(blueLED, LOW);
+    digitalWrite(redLED, LOW);
+  }
+
+  delay(2000);
+
+  if (!flag && check_blue == LOW && check_red == LOW && (analogRead(ldr) <= light_threshold)) {
+    digitalWrite(greenLED, HIGH);
+    Serial.println("Tumble Dryer has finished!");
+  } else {
+    digitalWrite(greenLED, LOW);
   }
   delay(2000);
 }
