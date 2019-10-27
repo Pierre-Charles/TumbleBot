@@ -48,7 +48,7 @@ void loop() {
     Serial.println("DRYER IS ON");
     flag = false;
   } else {
-    lcd.drawString(0, 0, "DRYER IS DONE");
+    lcd.clear();
     digitalWrite(blueLED, LOW);
     digitalWrite(redLED, LOW);
   }
