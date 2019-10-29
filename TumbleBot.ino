@@ -4,9 +4,9 @@
 
 U8X8_SSD1306_128X64_NONAME_SW_I2C lcd(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
 
-const int blueLED = 19;
-const int redLED = 23;
-const int greenLED = 18;
+const int blueLED = 27;
+const int redLED = 12;
+const int greenLED = 14;
 const int vibrationSensor = 35;
 const int ldr = 2;
 const int rfid_sda = 21;
@@ -57,9 +57,12 @@ void loop() {
 
   if (!flag && (analogRead(ldr) < light_threshold)) {
     digitalWrite(greenLED, HIGH);
+    lcd.drawString(0,0,"DRYER IS DONE!");
     Serial.println("Tumble Dryer has finished!");
   } else {
+    lcd.clear();
     digitalWrite(greenLED, LOW);
+    
   }
   delay(2000);
 }
