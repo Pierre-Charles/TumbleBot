@@ -2,8 +2,6 @@
 
 U8X8_SSD1306_128X64_NONAME_SW_I2C lcd(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
 
-AsyncWebServer server(80);
-
 // For LEDs
 const int blueLED = 18;
 const int redLED = 19;
@@ -39,6 +37,11 @@ void ISR() {
 
 void loop() {
 
+  long measurement = TP_init();
+  delay(50);
+  Serial.println("Readings from SW-420");
+  Serial.println(measurement);
+
   light_value = analogRead(ldr);
   Serial.println("Readings from LDR");
   Serial.println(light_value);
@@ -67,6 +70,12 @@ void loop() {
     //    digitalWrite(greenLED, LOW);
   }
   delay(2000);
+}
+
+long TP_init() {
+  delay(10);
+  long measurement = pulseIn(vibrationSensor, HIGH);
+  return measurement;
 }
 
 // Store a aggregator (process start or process end)
