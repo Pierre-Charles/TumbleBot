@@ -1,9 +1,4 @@
 #include <U8x8lib.h> // OLED Display for ESP
-#include <WiFi.h>
-#include <ESPAsyncWebServer.h>
-
-const char* ssid = "Vladimir_Routin";
-const char* passwd = "Ad%eliePen%guin5";
 
 U8X8_SSD1306_128X64_NONAME_SW_I2C lcd(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
 
@@ -18,7 +13,7 @@ const int greenLED = 23;
 const int vibrationSensor = 35;
 
 // For LDR
-const int ldr = 2;
+const int ldr = 34;
 int light_value = 0;
 int light_threshold = 900;
 

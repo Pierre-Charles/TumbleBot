@@ -7,7 +7,7 @@ int light_value = 0;
 
 AsyncWebServer server(80); // AsyncWebServer object on port 80
 
-String readDHTTemperature() {
+String readLDR() {
   light_value = analogRead(ldr);
   Serial.println(light_value);
   return String(light_value);
@@ -43,7 +43,7 @@ const char index_html[] PROGMEM = R"rawliteral(
   <p>
     <i class="fas fa-microchip" style="color:#581845;"></i> 
     <span class="dht-labels">LDR Reading</span> 
-    <span id="temperature">%TEMPERATURE%</span>
+    <span id="ldr">%LDR%</span>
   </p>
 </body>
 <script>
@@ -51,10 +51,10 @@ setInterval(function ( ) {
   var xhttp = new XMLHttpRequest();
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
-      document.getElementById("temperature").innerHTML = this.responseText;
+      document.getElementById("ldr").innerHTML = this.responseText;
     }
   };
-  xhttp.open("GET", "/temperature", true);
+  xhttp.open("GET", "/ldr", true);
   xhttp.send();
 }, 1000 ) ;
 </script>
@@ -63,8 +63,8 @@ setInterval(function ( ) {
 // Replaces placeholder with DHT values
 String processor(const String& var) {
   //Serial.println(var);
-  if (var == "TEMPERATURE") {
-    return readDHTTemperature();
+  if (var == "LDR") {
+    return readLDR();
   }
 
   return String();
@@ -89,8 +89,8 @@ void setup() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
     request->send_P(200, "text/html", index_html, processor);
   });
-  server.on("/temperature", HTTP_GET, [](AsyncWebServerRequest * request) {
-    request->send_P(200, "text/plain", readDHTTemperature().c_str());
+  server.on("/ldr", HTTP_GET, [](AsyncWebServerRequest * request) {
+    request->send_P(200, "text/plain", readLDR().c_str());
   });
 
   // Start server
