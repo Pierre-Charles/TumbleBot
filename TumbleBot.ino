@@ -1,21 +1,29 @@
 #include <U8x8lib.h> // OLED Display for ESP
-#include <Adafruit_PN532.h> // RFID Scanner
+#include <WiFi.h>
+#include <ESPAsyncWebServer.h>
 
+const char* ssid = "Vladimir_Routin";
+const char* passwd = "Ad%eliePen%guin5";
 
 U8X8_SSD1306_128X64_NONAME_SW_I2C lcd(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
 
-const int blueLED = 27;
-const int redLED = 12;
-const int greenLED = 14;
-const int vibrationSensor = 35;
-const int ldr = 2;
-const int rfid_sda = 21;
-const int rfid_scl = 22;
+AsyncWebServer server(80);
 
+// For LEDs
+const int blueLED = 18;
+const int redLED = 19;
+const int greenLED = 23;
+
+// For SW-420
+const int vibrationSensor = 35;
+
+// For LDR
+const int ldr = 2;
 int light_value = 0;
-int check_blue = digitalRead(blueLED);
-int check_red = digitalRead(redLED);
 int light_threshold = 900;
+
+volatile bool flag = false;
+volatile bool dryerStat = false;
 
 void setup() {
   Serial.begin(115200);
@@ -29,45 +37,42 @@ void setup() {
   lcd.setFont(u8x8_font_chroma48medium8_r);
 }
 
-volatile bool flag = false;
-
 void ISR() {
   flag = true;
+  dryerStat = true;
 }
 
 void loop() {
 
   light_value = analogRead(ldr);
+  Serial.println("Readings from LDR");
   Serial.println(light_value);
 
   if (flag) {
     lcd.clear();
+    digitalWrite(greenLED, LOW);
     digitalWrite(blueLED, HIGH);
-    digitalWrite(redLED, HIGH);
     lcd.drawString(0, 0, "DRYER IS ON");
     Serial.println("DRYER IS ON");
     flag = false;
   } else {
     lcd.clear();
     digitalWrite(blueLED, LOW);
-    digitalWrite(redLED, LOW);
   }
 
   delay(2000);
 
   if (!flag && (analogRead(ldr) < light_threshold)) {
     digitalWrite(greenLED, HIGH);
-    lcd.drawString(0,0,"DRYER IS DONE!");
+    dryerStat = false;
+    lcd.drawString(0, 0, "DRYER IS DONE!");
     Serial.println("Tumble Dryer has finished!");
   } else {
-    lcd.clear();
-    digitalWrite(greenLED, LOW);
-    
+    //    lcd.clear();
+    //    digitalWrite(greenLED, LOW);
   }
   delay(2000);
 }
-
-
 
 // Store a aggregator (process start or process end)
 
