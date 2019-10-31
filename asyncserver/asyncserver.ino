@@ -2,11 +2,10 @@
 #include "WiFi.h"
 #include "ESPAsyncWebServer.h"
 
-const int ldr = 2; // Digital pin connected to the DHT sensor
+const int ldr = 34; // Pin used for LDR sensor
 int light_value = 0;
 
-// Create AsyncWebServer object on port 80
-AsyncWebServer server(80);
+AsyncWebServer server(80); // AsyncWebServer object on port 80
 
 String readDHTTemperature() {
   light_value = analogRead(ldr);
@@ -57,7 +56,7 @@ setInterval(function ( ) {
   };
   xhttp.open("GET", "/temperature", true);
   xhttp.send();
-}, 10000 ) ;
+}, 1000 ) ;
 </script>
 </html>)rawliteral";
 
@@ -76,11 +75,10 @@ void setup() {
   Serial.begin(115200);
   pinMode(ldr, INPUT);
 
-
   // Connect to Wi-Fi
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
+    delay(300);
     Serial.println("Connecting to WiFi..");
   }
 
