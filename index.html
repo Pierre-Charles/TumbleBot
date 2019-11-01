@@ -1,0 +1,105 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <title>TumbleBot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css"
+    integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+  <style>
+    @import url('https://fonts.googleapis.com/css?family=Fira+Mono|Lato|Roboto|Montserrat|Open+Sans|Ubuntu|Ubuntu+Mono&display=swap');
+
+    html {
+      font-family: 'Roboto';
+      display: inline-block;
+      margin: 0px auto;
+      text-align: center;
+    }
+
+    body {
+      background: url(https://hdqwalls.com/wallpapers/blur-background-6z.jpg) no-repeat center center fixed;
+    }
+
+    .dht-labels {
+      font-size: 1.5rem;
+      vertical-align: middle;
+      padding-bottom: 15px;
+    }
+
+    .readings {
+      font-size: 1.5rem;
+      vertical-align: middle;
+      padding-bottom: 15px;
+      color: purple
+    }
+
+    .container {
+      font-family: 'Roboto';
+      width: 600px;
+      margin: 70px auto 0;
+      display: block;
+      background: #ececec;
+      padding: 10px 50px 50px;
+      border: 5px solid #ebebeb;
+      box-shadow: 0 19px 38px rgba(0, 0, 0, 0.30), 0 15px 12px rgba(0, 0, 0, 0.22);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 50px;
+    }
+
+    h2 small {
+      padding-top: 10px;
+      font-weight: normal;
+      color: #888;
+      display: block;
+    }
+
+    /* .footer {
+      margin-top: 50px;
+      padding-top: 20px;
+      text-align: center;
+    } */
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h2>TumbleBot<small>Tumbledryer Monitoring System</small></h2>
+    <br>
+    <p>
+      <i class="fas fa-plug" style="color:#581845;"></i>
+      <span class="dht-labels"> Power status: </span>
+      <span class="readings" id="ldr">ON / OFF</span>
+    </p>
+    <p>
+      <i class="fas fa-power-off" style="color:#581845;"></i>
+      <span class="dht-labels"> Cycle status: </span>
+      <span class="readings" id="ldr"> Running / Not in use</span>
+    </p>
+    <p>
+      <i class="fas fa-user" style="color:#581845;"></i>
+      <span class="dht-labels"> Being used by: </span>
+      <span class="readings" id="ldr">Pierre / Nobody</span>
+    </p>
+    
+      <br>
+      <small style="font-size: 10px; margin-top: 100px;">
+          <p>
+              <i class="fas fa-microchip" style="color:#581845;"></i>
+              <span>LDR Reading: </span>
+              <span style="color: purple" id="ldr">%LDR%</span>
+            </p>
+            <p>
+              <i class="fas fa-microchip" style="color:#581845;"></i>
+              <span>SW-420 Reading: </span>
+              <span style="color: purple" id="sw420">%SW420%</span>
+            </p>
+
+      </small>
+      <!-- <p class="footer">An IoT device by Pierre Charles</p> -->
+  </div>
+</body>
+
+</html>
