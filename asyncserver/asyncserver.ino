@@ -2,9 +2,6 @@
 #include "WiFi.h"
 #include "ESPAsyncWebServer.h"
 
-const char* ssid = "Vladimir_Routin";
-const char* password = "Ad%eliePen%guin5";
-
 const int ldr = 34; // Pin used for LDR sensor
 const int sw420 = 35;
 int light_value = 0;
@@ -13,7 +10,7 @@ AsyncWebServer server(80); // AsyncWebServer object on port 80
 
 String readLDR() {
   light_value = analogRead(ldr);
-  Serial.println("Reading from DR: ");
+  Serial.println("Reading from LDR: ");
   Serial.println(light_value);
   return String(light_value);
 }
@@ -102,7 +99,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     </p>
     <p>
       <i class="fas fa-memory" style="color:#581845;"></i>
-      <span class="dht-labels">SW420 Reading: </span>
+      <span class="dht-labels">SW-420 Reading: </span>
       <span class="readings" id="sw420">%SW420%</span>
       </span>
       <br>
