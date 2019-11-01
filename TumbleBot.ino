@@ -1,6 +1,17 @@
 #include <U8x8lib.h> // OLED Display for ESP
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+
+WiFiClient client;
+WiFiServer server(80);
+String header;
 
 U8X8_SSD1306_128X64_NONAME_SW_I2C lcd(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
+
+const char* ssid = "VM3156656";
+const char* password = "jn3qvGncNbn8";
+
+const char* authKey = "eh7LRYUr0zctT7d7GceXajmodzrcn19H__wbezBKHFs";
 
 // For LEDs
 const int blueLED = 18;
@@ -8,37 +19,68 @@ const int redLED = 19;
 const int greenLED = 23;
 
 // For SW-420
-const int vibrationSensor = 35;
+const int sw420 = 35;
 
 // For LDR
 const int ldr = 34;
 int light_value = 0;
-int light_threshold = 900;
+int light_threshold = 1500;
 
 volatile bool flag = false;
 volatile bool dryerStat = false;
-
-void setup() {
-  Serial.begin(115200);
-  pinMode(blueLED, OUTPUT);
-  pinMode(redLED, OUTPUT);
-  pinMode(greenLED, OUTPUT);
-  pinMode(vibrationSensor, INPUT);
-  pinMode(ldr, INPUT);
-  attachInterrupt(vibrationSensor, ISR, FALLING);
-  lcd.begin();
-  lcd.setFont(u8x8_font_chroma48medium8_r);
-}
 
 void ISR() {
   flag = true;
   dryerStat = true;
 }
 
-void loop() {
+long TP_init() {
+  long measurement = pulseIn(sw420, HIGH);
+  return measurement;
+}
 
+void initWiFi() {
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected.");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+  server.begin();
+}
+
+void telegramTrigger() {
+  client.print("POST /trigger/");
+  client.print("tumbleBot");
+  client.print("/with/key/");
+  client.print(authKey);
+  client.println(" HTTP/1.1");
+  client.println("Host: maker.ifttt.com");
+  client.println("User-Agent: ESP");
+  client.println("Connection: close");
+  client.println();
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(blueLED, OUTPUT);
+  pinMode(redLED, OUTPUT);
+  pinMode(greenLED, OUTPUT);
+  pinMode(sw420, INPUT);
+  pinMode(ldr, INPUT);
+  attachInterrupt(sw420, ISR, FALLING);
+  lcd.begin();
+  lcd.setFont(u8x8_font_chroma48medium8_r);
+  initWiFi();
+}
+
+void loop() {
   long measurement = TP_init();
-  delay(50);
   Serial.println("Readings from SW-420");
   Serial.println(measurement);
 
@@ -47,9 +89,9 @@ void loop() {
   Serial.println(light_value);
 
   if (flag) {
-    lcd.clear();
     digitalWrite(greenLED, LOW);
     digitalWrite(blueLED, HIGH);
+    lcd.clear();
     lcd.drawString(0, 0, "DRYER IS ON");
     Serial.println("DRYER IS ON");
     flag = false;
@@ -65,33 +107,14 @@ void loop() {
     dryerStat = false;
     lcd.drawString(0, 0, "DRYER IS DONE!");
     Serial.println("Tumble Dryer has finished!");
-  } else {
-    //    lcd.clear();
-    //    digitalWrite(greenLED, LOW);
+    if (WiFi.status() == WL_CONNECTED)
+    {
+      Serial.println("Connecting to IFTTT");
+      if (client.connect("maker.ifttt.com", 80))
+      {
+        telegramTrigger();
+      }
+    }
+    delay(2000);
   }
-  delay(2000);
 }
-
-long TP_init() {
-  delay(10);
-  long measurement = pulseIn(vibrationSensor, HIGH);
-  return measurement;
-}
-
-// Store a aggregator (process start or process end)
-
-// Breadborad pin 13 for input
-// Purple wire goes to pin 1
-// Grey wire goes to pin 2
-
-// Bigger resistor less power it wastes but less range to measure over
-
-// LDR is 3kohms
-
-// LED off
-// LED on
-// Fallen off the tumble dryer
-
-// Minify html file and progmem it to program memory. Puts it iiin program memory. Then do client.write(variable name)
-
-// Check when the tumble dryer was last on, then if it has been more than 10 seconds, then tell me that the dryer was off

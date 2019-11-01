@@ -2,6 +2,9 @@
 #include "WiFi.h"
 #include "ESPAsyncWebServer.h"
 
+const char* ssid = "VM3156656";
+const char* password = "jn3qvGncNbn8";
+
 const int ldr = 34; // Pin used for LDR sensor
 const int sw420 = 35;
 int light_value = 0;
@@ -99,7 +102,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     </p>
     <p>
       <i class="fas fa-memory" style="color:#581845;"></i>
-      <span class="dht-labels">SW-420 Reading: </span>
+      <span class="dht-labels">SW420 Reading: </span>
       <span class="readings" id="sw420">%SW420%</span>
       </span>
       <br>
