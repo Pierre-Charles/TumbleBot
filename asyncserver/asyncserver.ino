@@ -10,7 +10,7 @@ AsyncWebServer server(80); // AsyncWebServer object on port 80
 
 String readLDR() {
   light_value = analogRead(ldr);
-  Serial.println("Reading from DR: ");
+  Serial.println("Reading from LDR: ");
   Serial.println(light_value);
   return String(light_value);
 }
@@ -99,7 +99,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     </p>
     <p>
       <i class="fas fa-memory" style="color:#581845;"></i>
-      <span class="dht-labels">SW420 Reading: </span>
+      <span class="dht-labels">SW-420 Reading: </span>
       <span class="readings" id="sw420">%SW420%</span>
       </span>
       <br>
