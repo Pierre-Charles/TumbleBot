@@ -100,6 +100,7 @@ void loop() {
   delay(2000);
 
   if (!flag && (analogRead(ldr) < light_threshold)) {
+    digitalWrite(blueLED, LOW);
     digitalWrite(greenLED, HIGH);
     dryerStat = false;
     lcd.drawString(0, 0, "DRYER IS DONE!");

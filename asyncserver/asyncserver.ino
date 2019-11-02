@@ -22,7 +22,7 @@ String readSW420() {
   return String(measurement);
 }
 
-const char index_html[] PROGMEM = R"rawliteral(
+const char index_html[] = R"rawText(
 <!DOCTYPE HTML>
 <html>
 
@@ -130,7 +130,7 @@ setInterval(function ( ) {
   xhttp.send();
 }, 1000) ;
 </script>
-</html>)rawliteral";
+</html>)rawText";
 
 // Replaces placeholder with DHT values
 String processor(const String& var) {
