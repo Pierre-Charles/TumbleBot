@@ -1,6 +1,9 @@
 // Import required libraries
 #include "WiFi.h"
 #include "ESPAsyncWebServer.h"
+#include "U8x8lib.h"
+
+U8X8_SSD1306_128X64_NONAME_SW_I2C lcd(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
 
 WiFiClient client;
 WiFiServer servero(80);
@@ -10,7 +13,6 @@ const char* ssid = "VladimirRoutin";
 const char* password = "jn3qvGncNbn8";
 
 const char* authKey = "eh7LRYUr0zctT7d7GceXajmodzrcn19H__wbezBKHFs";
-
 
 // For LEDs
 const int blueLED = 18;
@@ -36,27 +38,9 @@ AsyncWebServer server(80); // AsyncWebServer object on port 80
 
 String readStatus() {
   return (flag ? "Running" : "Idle");
-//  
-//  if (flag) {
-//    return "Running";
-//  } else {
-//    return "Idle";
-//  }
-}
 
 String readIfFinished() {
   return (finished ? "Finished" : "In cycle");
-  
-//  if (finished) {
-//    return "Finished";
-//  } else {
-//    return "In cycle";
-//  }
-}
-
-//String showPerson() {
-//  return (personFound ? person : "N/A");
-//}
 
 String readSW420() {
   long measurement = pulseIn(sw420, HIGH);
@@ -121,7 +105,7 @@ const char* index_html = R"rawText(
     }
 
     body {
-      background: url(https://hdqwalls.com/wallpapers/blur-background-6z.jpg) no-repeat center center fixed;
+      background: url('https://hdqwalls.com/wallpapers/blur-background-6z.jpg') no-repeat center center fixed;
     }
 
     .dht-labels {
@@ -271,6 +255,8 @@ void setup() {
   pinMode(sw420, INPUT);
   pinMode(ldr, INPUT);
   attachInterrupt(sw420, ISR, FALLING);
+  lcd.begin();
+  lcd.setFont(u8x8_font_chroma48medium8_r);
 
   // Route for root / web page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
@@ -298,10 +284,13 @@ void loop() {
     digitalWrite(greenLED, LOW);
     digitalWrite(blueLED, HIGH);
     finished = false;
+    lcd.clear();
+    lcd.drawString(0, 0, "Dryer is on!");
     Serial.println("DRYER IS ON");
     flag = false;
   } else {
     digitalWrite(blueLED, LOW);
+    lcd.clear();
   }
 
   delay(2000);
@@ -310,6 +299,7 @@ void loop() {
     digitalWrite(blueLED, LOW);
     digitalWrite(greenLED, HIGH);
     dryerStat = false;
+    lcd.drawString(0, 0, "Dryer is finished!");
     Serial.println("Tumble Dryer has finished!");
     finished = true;
     if (messageSent == 0 && WiFi.status() == WL_CONNECTED)
