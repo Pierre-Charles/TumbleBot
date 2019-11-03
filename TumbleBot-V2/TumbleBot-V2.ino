@@ -2,12 +2,33 @@
 #include "WiFi.h"
 #include "ESPAsyncWebServer.h"
 
-const char* ssid = "VM3156656";
-const char* password = "jn3qvGncNbn8"
+WiFiClient client;
+WiFiServer servero(80);
+String header;
 
-const int ldr = 34; // Pin used for LDR sensor
+const char* ssid = "VM3156656";
+const char* password = "jn3qvGncNbn8";
+
+const char* authKey = "eh7LRYUr0zctT7d7GceXajmodzrcn19H__wbezBKHFs";
+
+
+// For LEDs
+const int blueLED = 18;
+const int redLED = 19;
+const int greenLED = 23;
+
+// For SW-420
 const int sw420 = 35;
+
+// For LDR
+const int ldr = 34;
 int light_value = 0;
+int light_threshold = 1700;
+
+volatile bool flag = false;
+volatile bool dryerStat = false; // For web page to show if its running or idle
+volatile bool finished = false; // for web page to show if its finished or in still progress
+volatile bool power = false; // for web page to show if dryer is on or off
 
 AsyncWebServer server(80); // AsyncWebServer object on port 80
 
@@ -18,14 +39,62 @@ String readLDR() {
   return String(light_value);
 }
 
+String readStatus() {
+  if (flag) {
+    return "Running";
+  } else {
+    return "Idle";
+  }
+}
+
+String readIfFinished() {
+  if (finished) {
+    return "Finished";
+  } else {
+    return "In cycle";
+  }
+}
+
 String readSW420() {
   long measurement = pulseIn(sw420, HIGH);
+
   Serial.println("Reading from SW-420");
   Serial.println(measurement);
   return String(measurement);
 }
 
-const char index_html[] = R"rawText(
+void ISR() {
+  flag = true;
+  dryerStat = true;
+}
+
+void initWiFi() {
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected.");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void telegramTrigger() {
+  client.print("POST /trigger/");
+  client.print("tumbleBot");
+  client.print("/with/key/");
+  client.print(authKey);
+  client.println(" HTTP/1.1");
+  client.println("Host: maker.ifttt.com");
+  client.println("User-Agent: ESP");
+  client.println("Connection: close");
+  client.println();
+}
+
+const char* index_html = R"rawText(
 <!DOCTYPE HTML>
 <html>
 
@@ -34,7 +103,7 @@ const char index_html[] = R"rawText(
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css"
     integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-  <style>
+    <style>
     @import url('https://fonts.googleapis.com/css?family=Fira+Mono|Lato|Roboto|Montserrat|Open+Sans|Ubuntu|Ubuntu+Mono&display=swap');
 
     html {
@@ -92,9 +161,19 @@ const char index_html[] = R"rawText(
 </head>
 
 <body>
-  <div class="container">
+<div class="container">
     <h2>TumbleBot<small>Tumbledryer Monitoring System</small></h2>
     <br>
+    <p>
+      <i class="fas fa-plug" style="color:#581845;"></i>
+      <span class="dht-labels"> Power stat: </span>
+      <span class="readings" id="status">%STATUS%</span>
+    </p>
+    <p>
+      <i class="fas fa-power-off" style="color:#581845;"></i>
+      <span class="dht-labels"> Cycle stat: </span>
+      <span class="readings" id="finished">%FINISHED%</span>
+    </p>
     <p>
       <i class="fas fa-microchip" style="color:#581845;"></i>
       <span class="dht-labels">LDR Reading: </span>
@@ -104,7 +183,7 @@ const char index_html[] = R"rawText(
       <i class="fas fa-memory" style="color:#581845;"></i>
       <span class="dht-labels">SW420 Reading: </span>
       <span class="readings" id="sw420">%SW420%</span>
-      </span>
+    </p>
       <br>
       <p class="footer">An IoT device by Pierre Charles</p>
   </div>
@@ -120,7 +199,7 @@ setInterval(function ( ) {
   };
   xhttp.open("GET", "/ldr", true);
   xhttp.send();
-}, 1000);
+}, 5000);
 
 setInterval(function ( ) {
   var xhttp = new XMLHttpRequest();
@@ -131,7 +210,30 @@ setInterval(function ( ) {
   };
   xhttp.open("GET", "/sw420", true);
   xhttp.send();
-}, 1000) ;
+}, 5000) ;
+
+setInterval(function ( ) {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("status").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "/status", true);
+  xhttp.send();
+}, 5000);
+
+setInterval(function ( ) {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("finished").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "/finished", true);
+  xhttp.send();
+}, 5000);
+
 </script>
 </html>)rawText";
 
@@ -142,6 +244,12 @@ String processor(const String& var) {
     return readLDR();
   } else if (var == "SW420") {
     return readSW420();
+  } else if (var == "FLAG") {
+    return readSW420();
+  } else if (var == "STATUS") {
+    return readSW420();
+  } else if (var == "FINISHED") {
+    return readIfFinished();
   }
   return String();
 }
@@ -149,18 +257,13 @@ String processor(const String& var) {
 void setup() {
   // Serial port for debugging purposes
   Serial.begin(115200);
-  pinMode(ldr, INPUT);
+  pinMode(blueLED, OUTPUT);
+  pinMode(redLED, OUTPUT);
+  pinMode(greenLED, OUTPUT);
   pinMode(sw420, INPUT);
-
-  // Connect to Wi-Fi
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(300);
-    Serial.println("Connecting to WiFi..");
-  }
-
-  // Print ESP32 Local IP Address
-  Serial.println(WiFi.localIP());
+  pinMode(ldr, INPUT);
+  attachInterrupt(sw420, ISR, FALLING);
+  initWiFi();
 
   // Route for root / web page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
@@ -172,11 +275,44 @@ void setup() {
   server.on("/sw420", HTTP_GET, [](AsyncWebServerRequest * request) {
     request->send_P(200, "text/plain", readSW420().c_str());
   });
+  server.on("/status", HTTP_GET, [](AsyncWebServerRequest * request) {
+    request->send_P(200, "text/plain", readStatus().c_str());
+  });
+  server.on("/finished", HTTP_GET, [](AsyncWebServerRequest * request) {
+    request->send_P(200, "text/plain", readIfFinished().c_str());
+  });
 
   // Start server
   server.begin();
 }
 
 void loop() {
+  if (flag) {
+    digitalWrite(greenLED, LOW);
+    digitalWrite(blueLED, HIGH);
+    finished = false;
+    Serial.println("DRYER IS ON");
+    flag = false;
+  } else {
+    digitalWrite(blueLED, LOW);
+  }
 
+  delay(2000);
+
+  if (!flag && (analogRead(ldr) < light_threshold)) {
+    digitalWrite(blueLED, LOW);
+    digitalWrite(greenLED, HIGH);
+    dryerStat = false;
+    Serial.println("Tumble Dryer has finished!");
+    finished = true;
+    if (WiFi.status() == WL_CONNECTED)
+    {
+      Serial.println("Connecting to IFTTT");
+      if (client.connect("maker.ifttt.com", 80))
+      {
+        telegramTrigger();
+      }
+    }
+    delay(2000);
+  }
 }
