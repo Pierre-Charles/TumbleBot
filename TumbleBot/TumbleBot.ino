@@ -9,8 +9,8 @@ String header;
 
 U8X8_SSD1306_128X64_NONAME_SW_I2C lcd(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
 
-const char* ssid = "VM3156656";
-const char* = "jn3qvGncNbn8";
+const char* ssid = "";
+const char* password = ""
 const char* authKey = "eh7LRYUr0zctT7d7GceXajmodzrcn19H__wbezBKHFs";
 
 // For LEDs
