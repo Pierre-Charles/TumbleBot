@@ -6,8 +6,8 @@ WiFiClient client;
 WiFiServer servero(80);
 String header;
 
-const char* ssid = "";
-const char* password = "";
+const char* ssid = "VladimirRoutin";
+const char* password = "jn3qvGncNbn8";
 
 const char* authKey = "eh7LRYUr0zctT7d7GceXajmodzrcn19H__wbezBKHFs";
 
@@ -23,7 +23,9 @@ const int sw420 = 35;
 // For LDR
 const int ldr = 34;
 int light_value = 0;
-int light_threshold = 1700;
+int light_threshold = 3700;
+
+int messageSent = 0;
 
 volatile bool flag = false;
 volatile bool dryerStat = false; // For web page to show if its running or idle
@@ -32,35 +34,40 @@ volatile bool power = false; // for web page to show if dryer is on or off
 
 AsyncWebServer server(80); // AsyncWebServer object on port 80
 
-String readLDR() {
-  light_value = analogRead(ldr);
-  Serial.println("Reading from LDR: ");
-  Serial.println(light_value);
-  return String(light_value);
-}
-
 String readStatus() {
-  if (flag) {
-    return "Running";
-  } else {
-    return "Idle";
-  }
+  return (flag ? "Running" : "Idle");
+//  
+//  if (flag) {
+//    return "Running";
+//  } else {
+//    return "Idle";
+//  }
 }
 
 String readIfFinished() {
-  if (finished) {
-    return "Finished";
-  } else {
-    return "In cycle";
-  }
+  return (finished ? "Finished" : "In cycle");
+  
+//  if (finished) {
+//    return "Finished";
+//  } else {
+//    return "In cycle";
+//  }
 }
+
+//String showPerson() {
+//  return (personFound ? person : "N/A");
+//}
 
 String readSW420() {
   long measurement = pulseIn(sw420, HIGH);
-
-  Serial.println("Reading from SW-420");
-  Serial.println(measurement);
+  Serial.println("Reading from SW-420: " + String(measurement));
   return String(measurement);
+}
+
+String readLDR() {
+  light_value = analogRead(ldr);
+  Serial.println("Reading from LDR: " + String(light_value));
+  return String(light_value);
 }
 
 void ISR() {
@@ -257,13 +264,13 @@ String processor(const String& var) {
 void setup() {
   // Serial port for debugging purposes
   Serial.begin(115200);
+  initWiFi();
   pinMode(blueLED, OUTPUT);
   pinMode(redLED, OUTPUT);
   pinMode(greenLED, OUTPUT);
   pinMode(sw420, INPUT);
   pinMode(ldr, INPUT);
   attachInterrupt(sw420, ISR, FALLING);
-  initWiFi();
 
   // Route for root / web page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
@@ -305,12 +312,13 @@ void loop() {
     dryerStat = false;
     Serial.println("Tumble Dryer has finished!");
     finished = true;
-    if (WiFi.status() == WL_CONNECTED)
+    if (messageSent == 0 && WiFi.status() == WL_CONNECTED)
     {
       Serial.println("Connecting to IFTTT");
       if (client.connect("maker.ifttt.com", 80))
       {
         telegramTrigger();
+        messageSent++;
       }
     }
     delay(2000);
