@@ -2,8 +2,8 @@
 #include "WiFi.h"
 #include "ESPAsyncWebServer.h"
 
-const char* ssid = "VM3156656";
-const char* password = "jn3qvGncNbn8"
+const char* ssid = "";
+const char* password = ""
 
 const int ldr = 34; // Pin used for LDR sensor
 const int sw420 = 35;
