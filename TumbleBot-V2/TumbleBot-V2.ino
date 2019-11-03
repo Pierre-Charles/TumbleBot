@@ -6,8 +6,8 @@ WiFiClient client;
 WiFiServer servero(80);
 String header;
 
-const char* ssid = "VM3156656";
-const char* password = "jn3qvGncNbn8";
+const char* ssid = "";
+const char* password = "";
 
 const char* authKey = "eh7LRYUr0zctT7d7GceXajmodzrcn19H__wbezBKHFs";
 
