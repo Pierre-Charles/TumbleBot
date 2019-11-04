@@ -6,6 +6,7 @@
 #include <MFRC522.h>
 
 U8X8_SSD1306_128X64_NONAME_SW_I2C lcd(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16); // Create LCD instance
+
 MFRC522 mfrc522(21, 4); // Create MFRCC522 instance
 
 WiFiClient client;
@@ -34,10 +35,13 @@ int light_threshold = 500;
 
 int messageSent = 0;
 
+String user = "";
+
 volatile bool flag = false;
 volatile bool dryerStat = false; // For web page to show if its running or idle
 volatile bool finished = false; // for web page to show if its finished or in still progress
 volatile bool power = false; // for web page to show if dryer is on or off
+volatile bool cardScanned = false; // for RFID
 
 AsyncWebServer server(80); // AsyncWebServer object on port 80
 
@@ -45,8 +49,12 @@ String readStatus() {
   return (flag ? "Running" : "Idle");
 }
 
+String readUser() {
+  return (cardScanned ? String(user) : "Nobody");
+}
+
 String readIfFinished() {
-  return (finished ? "Finished" : "In cycle");
+  return (finished ? "Finished" : "In Cycle");
 }
 
 String readSW420() {
@@ -124,7 +132,7 @@ const char* index_html = R"rawText(
         <h6 class='text-muted font-italic font-weight-normal'>Tumble dryer monitoring system</h6>
       </div>
       <br>
-      <div class='text-center'>
+      <div class='pt-4 text-center'>
       <div class='py-2'>
         <i class="fas fa-plug" style="color:purple"></i>
         <span> Power status: </span>
@@ -134,27 +142,28 @@ const char* index_html = R"rawText(
       <div class='py-2'>
         <i class="fas fa-power-off" style="color: purple"></i>
         <span> Cycle status: </span>
-        <span id="finished" style="color:#004e86">%FINISHED</span>
+        <span id="finished" style="color:#004e86">%FINISHED%</span>
       </div>
 
       <div class='py-2'>
         <i class="fas fa-user" style="color: purple"></i>
         <span> Being used by: </span>
-        <span id="user" style="color:#004e86">Pierre</span>
+        <span id="user" style="color:#004e86">%USER%</span>
       </div>
     </div>
+    <br><br>
 
       <div class='row pt-5 text-center'>
-        <div class='col-md-5 col-5 text-center'>
+        <div class='col-md-6 col-6 text-center'>
           <i class="fas fa-chart-area" style="color:purple"></i>
-          <small>LDR:</small>
-          <small id="ldr" style="color:#004e86">%LDR%</small>
+          <p class='m-0'>LDR:</p>
+          <p id="ldr" style="color:#004e86">%LDR%</p>
         </div>
 
-        <div class='col-md-5 col-5 text-center'>
+        <div class='col-md-6 col-6 text-center'>
           <i class="fas fa-cogs" style="color:purple"></i>
-          <small>SW-420:</small>
-          <small id="sw420" style="color:#004e86">%SW420%</small>
+          <p class='m-0'>SW-420:</p>
+          <p id="sw420" style="color:#004e86">%SW420%</p>
         </div>
       </div>
     </div>
@@ -206,6 +215,17 @@ setInterval(function ( ) {
   xhttp.send();
 }, 5000);
 
+setInterval(function ( ) {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("user").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "/user", true);
+  xhttp.send();
+}, 5000);
+
 </script>
 </html>)rawText";
 
@@ -221,13 +241,54 @@ String processor(const String& var) {
     return readSW420();
   } else if (var == "FINISHED") {
     return readIfFinished();
+  } else if (var == "USER") {
+    return readUser();
   }
   return String();
+}
+
+void readRFID() {
+  // Look for new cards
+  if (!mfrc522.PICC_IsNewCardPresent()) {
+    return;
+  }
+
+  // Select one of the cards
+  if (!mfrc522.PICC_ReadCardSerial()) {
+    return;
+  }
+
+  //Show UID on serial monitor
+  Serial.print("UID: ");
+  String content = "";
+  byte letter;
+  for (byte i = 0; i < mfrc522.uid.size; i++) {
+    Serial.print(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " ");
+    Serial.print(mfrc522.uid.uidByte[i], HEX);
+    content.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " "));
+    content.concat(String(mfrc522.uid.uidByte[i], HEX));
+  }
+
+  Serial.println();
+  Serial.print("Message: ");
+  content.toUpperCase();
+
+  if (content.substring(1) == "82 BB B9 67") {
+    Serial.println("Hello Pierre!");
+    user = "Pierre";
+
+  } else if (content.substring(1) == "49 93 05 4F") {
+    Serial.println("Hello, Pierre!");
+    user = "Pierre";
+  }
+  cardScanned = true;
+
 }
 
 void setup() {
   // Serial port for debugging purposes
   Serial.begin(115200);
+  initWiFi();
   SPI.begin();      // Initiate  SPI bus
   mfrc522.PCD_Init();   // Initiate MFRC522
   pinMode(blueLED, OUTPUT);
@@ -238,7 +299,6 @@ void setup() {
   attachInterrupt(sw420, ISR, FALLING);
   lcd.begin();
   lcd.setFont(u8x8_font_chroma48medium8_r);
-  initWiFi();
 
   // Route for root / web page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
@@ -256,24 +316,25 @@ void setup() {
   server.on("/finished", HTTP_GET, [](AsyncWebServerRequest * request) {
     request->send_P(200, "text/plain", readIfFinished().c_str());
   });
+  server.on("/user", HTTP_GET, [](AsyncWebServerRequest * request) {
+    request->send_P(200, "text/plain", readUser().c_str());
+  });
 
   // Start server
   server.begin();
 }
 
 void loop() {
+  readRFID();
+  delay(2000);
   if (flag) {
     digitalWrite(greenLED, LOW);
     digitalWrite(blueLED, HIGH);
     lcd.drawString(0, 0, "Dryer is on!");
     Serial.println("DRYER IS ON");
     flag = false;
-  } else {
-    digitalWrite(blueLED, LOW);
-    lcd.clear();
   }
-
-  delay(2000);
+    delay(2000);
 
   if (!flag && (analogRead(ldr) < light_threshold)) {
     digitalWrite(blueLED, LOW);
