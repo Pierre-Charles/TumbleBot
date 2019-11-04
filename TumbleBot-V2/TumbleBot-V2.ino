@@ -1,7 +1,7 @@
-// Import required libraries
 #include "WiFi.h"
 #include "ESPAsyncWebServer.h"
 #include "U8x8lib.h"
+#include "HTTPClient.h"
 
 U8X8_SSD1306_128X64_NONAME_SW_I2C lcd(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
 
@@ -9,15 +9,15 @@ WiFiClient client;
 WiFiServer servero(80);
 String header;
 
-const char* ssid = "VladimirRoutin";
-const char* password = "jn3qvGncNbn8";
+const char* ssid = "microlab_IoT";
+const char* password = "shibboleet";
 
 const char* authKey = "eh7LRYUr0zctT7d7GceXajmodzrcn19H__wbezBKHFs";
 
 // For LEDs
-const int blueLED = 18;
-const int redLED = 19;
-const int greenLED = 23;
+const int blueLED = 27;
+const int redLED = 12;
+const int greenLED = 14;
 
 // For SW-420
 const int sw420 = 35;
@@ -25,7 +25,9 @@ const int sw420 = 35;
 // For LDR
 const int ldr = 34;
 int light_value = 0;
-int light_threshold = 3700;
+//int light_threshold = 3700;
+int light_threshold = 500;
+
 
 int messageSent = 0;
 
@@ -38,9 +40,11 @@ AsyncWebServer server(80); // AsyncWebServer object on port 80
 
 String readStatus() {
   return (flag ? "Running" : "Idle");
+}
 
 String readIfFinished() {
   return (finished ? "Finished" : "In cycle");
+}
 
 String readSW420() {
   long measurement = pulseIn(sw420, HIGH);
@@ -83,6 +87,13 @@ void telegramTrigger() {
   client.println("User-Agent: ESP");
   client.println("Connection: close");
   client.println();
+}
+
+void notifyMyEcho() {
+  HTTPClient http;
+  http.begin("https://api.notifymyecho.com/v1/NotifyMe?notification=The%20tumble%20dryer%20is%20done!%20Please%20collect%20your%20clothes%20and%20remember%20to%20clean%20the%20filter%20after%20emptying%20the%20dryer&accessCode=amzn1.ask.account.AFA4JRT4OJ4DPYPL5ND5537QTFREQKIPDKMVVAHSORMMRHSFCD5HVAYH5M2CNKIJ77QFOIPYWTU23U56572JC5SVTLTF5C4JTCWHL4ZROAPWMMKOG52MHDZDOUIQKCYN7ELCTN7D3URL3I7PAUERSWI5Q7JAGRHEAE4A3UUQ4JSV26HAJ4DRJ73SGPUSNKPUNHK2PUL6AXDHM2Y");
+  http.GET();
+  http.end();
 }
 
 const char* index_html = R"rawText(
@@ -283,8 +294,6 @@ void loop() {
   if (flag) {
     digitalWrite(greenLED, LOW);
     digitalWrite(blueLED, HIGH);
-    finished = false;
-    lcd.clear();
     lcd.drawString(0, 0, "Dryer is on!");
     Serial.println("DRYER IS ON");
     flag = false;
@@ -299,7 +308,7 @@ void loop() {
     digitalWrite(blueLED, LOW);
     digitalWrite(greenLED, HIGH);
     dryerStat = false;
-    lcd.drawString(0, 0, "Dryer is finished!");
+    lcd.drawString(0, 0, "Dryer is done!");
     Serial.println("Tumble Dryer has finished!");
     finished = true;
     if (messageSent == 0 && WiFi.status() == WL_CONNECTED)
@@ -308,6 +317,8 @@ void loop() {
       if (client.connect("maker.ifttt.com", 80))
       {
         telegramTrigger();
+        Serial.println("Connecting to Amazon Echo Dot");
+        notifyMyEcho();
         messageSent++;
       }
     }
