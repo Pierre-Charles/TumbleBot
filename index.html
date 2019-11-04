@@ -5,101 +5,57 @@
   <title>TumbleBot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://kit.fontawesome.com/eea885c940.js" crossorigin="anonymous"></script>
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+    integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
   <style>
-    @import url('https://fonts.googleapis.com/css?family=Fira+Mono|Lato|Roboto|Montserrat|Open+Sans|Ubuntu|Ubuntu+Mono&display=swap');
-
-    html {
-      font-family: 'Roboto';
-      display: inline-block;
-      margin: 0px auto;
-      text-align: center;
-    }
-
     body {
       background: url(https://hdqwalls.com/wallpapers/blur-background-6z.jpg) no-repeat center center fixed;
     }
-
-    .dht-labels {
-      font-size: 1.5rem;
-      vertical-align: middle;
-      padding-bottom: 15px;
-    }
-
-    .readings {
-      font-size: 1.5rem;
-      vertical-align: middle;
-      padding-bottom: 15px;
-      color: purple
-    }
-
-    .container {
-      font-family: 'Roboto';
-      width: 600px;
-      margin: 70px auto 0;
-      display: block;
-      background: #ececec;
-      padding: 10px 50px 50px;
-      border: 5px solid #ebebeb;
-      box-shadow: 0 19px 38px rgba(0, 0, 0, 0.30), 0 15px 12px rgba(0, 0, 0, 0.22);
-    }
-
-    h2 {
-      text-align: center;
-      margin-bottom: 50px;
-    }
-
-    h2 small {
-      padding-top: 10px;
-      font-weight: normal;
-      color: #888;
-      display: block;
-    }
-
-    /* .footer {
-      margin-top: 50px;
-      padding-top: 20px;
-      text-align: center;
-    } */
   </style>
 </head>
 
 <body>
-  <div class="container">
-    <h2>TumbleBot<small>Tumbledryer Monitoring System</small></h2>
-    <br>
-    <p>
-      <i class="fas fa-plug" style="color:#581845;"></i>
-      <span class="dht-labels"> Power status: </span>
-      <span class="readings" id="ldr">ON / OFF</span>
-    </p>
-    <p>
-      <i class="fas fa-power-off" style="color:#581845;"></i>
-      <span class="dht-labels"> Cycle status: </span>
-      <span class="readings" id="ldr"> Running / Not in use</span>
-    </p>
-    <p>
-      <i class="fas fa-user" style="color:#581845;"></i>
-      <span class="dht-labels"> Being used by: </span>
-      <span class="readings" id="ldr">Pierre / Nobody</span>
-    </p>
-    
+  <div class='mt-5 mx-4'>
+    <div class='col-12 col-lg-5 col-md-5 container bg-light p-5 shadow'>
+      <div class='text-center'>
+        <h3>TumbleBot</h3>
+        <h6 class='text-muted font-italic font-weight-normal'>Tumble dryer monitoring system</h6>
+      </div>
       <br>
-      <small style="font-size: 10px; margin-top: 100px;">
-          <p>
-              <i class="fas fa-microchip" style="color:#581845;"></i>
-              <span>LDR Reading: </span>
-              <span style="color: purple" id="ldr">%LDR%</span>
-            </p>
-            <p>
-              <i class="fas fa-microchip" style="color:#581845;"></i>
-              <span>SW-420 Reading: </span>
-              <span style="color: purple" id="sw420">%SW420%</span>
-            </p>
+      <div class='text-center'>
+      <div class='py-2'>
+        <i class="fas fa-plug" style="color:purple"></i>
+        <span> Power status: </span>
+        <span id="status" style="color:#004e86">%STATUS%</span>
+      </div>
 
-      </small>
-      <!-- <p class="footer">An IoT device by Pierre Charles</p> -->
+      <div class='py-2'>
+        <i class="fas fa-power-off" style="color: purple"></i>
+        <span> Cycle status: </span>
+        <span id="finished" style="color:#004e86">%FINISHED</span>
+      </div>
+
+      <div class='py-2'>
+        <i class="fas fa-user" style="color: purple"></i>
+        <span> Being used by: </span>
+        <span id="user" style="color:#004e86">Pierre</span>
+      </div>
+    </div>
+
+      <div class='row pt-5 text-center'>
+        <div class='col-md-5 col-5 text-center'>
+          <i class="fas fa-chart-area" style="color:purple"></i>
+          <small>LDR:</small>
+          <small id="ldr" style="color:#004e86">%LDR%</small>
+        </div>
+
+        <div class='col-md-5 col-5 text-center'>
+          <i class="fas fa-cogs" style="color:purple"></i>
+          <small>SW-420:</small>
+          <small id="sw420" style="color:#004e86">%SW420%</small>
+        </div>
+      </div>
+    </div>
   </div>
 </body>
 

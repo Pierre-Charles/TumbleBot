@@ -1,23 +1,26 @@
-#include "WiFi.h"
-#include "ESPAsyncWebServer.h"
-#include "U8x8lib.h"
-#include "HTTPClient.h"
+#include <WiFi.h>
+#include <ESPAsyncWebServer.h>
+#include <U8x8lib.h>
+#include <HTTPClient.h>
+#include <SPI.h>
+#include <MFRC522.h>
 
-U8X8_SSD1306_128X64_NONAME_SW_I2C lcd(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16);
+U8X8_SSD1306_128X64_NONAME_SW_I2C lcd(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16); // Create LCD instance
+MFRC522 mfrc522(21, 4); // Create MFRCC522 instance
 
 WiFiClient client;
 WiFiServer servero(80);
 String header;
 
-const char* ssid = "microlab_IoT";
-const char* password = "shibboleet";
+const char* ssid = "VladimirRoutin";
+const char* password = "jn3qvGncNbn8";
 
 const char* authKey = "eh7LRYUr0zctT7d7GceXajmodzrcn19H__wbezBKHFs";
 
 // For LEDs
-const int blueLED = 27;
-const int redLED = 12;
-const int greenLED = 14;
+const int redLED = 13;
+const int greenLED = 12;
+const int blueLED = 14;
 
 // For SW-420
 const int sw420 = 35;
@@ -103,91 +106,58 @@ const char* index_html = R"rawText(
 <head>
   <title>TumbleBot</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css"
-    integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-    <style>
-    @import url('https://fonts.googleapis.com/css?family=Fira+Mono|Lato|Roboto|Montserrat|Open+Sans|Ubuntu|Ubuntu+Mono&display=swap');
-
-    html {
-      font-family: 'Roboto';
-      display: inline-block;
-      margin: 0px auto;
-      text-align: center;
-    }
-
+  <script src="https://kit.fontawesome.com/eea885c940.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+    integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <style>
     body {
-      background: url('https://hdqwalls.com/wallpapers/blur-background-6z.jpg') no-repeat center center fixed;
-    }
-
-    .dht-labels {
-      font-size: 1.5rem;
-      vertical-align: middle;
-      padding-bottom: 15px;
-    }
-
-    .readings {
-      font-size: 1.5rem;
-      vertical-align: middle;
-      padding-bottom: 15px;
-      color: purple
-    }
-
-    .container {
-      font-family: 'Roboto';
-      width: 600px;
-      margin: 70px auto 0;
-      display: block;
-      background: #ececec;
-      padding: 10px 50px 50px;
-      border: 5px solid #ebebeb;
-      box-shadow: 0 19px 38px rgba(0, 0, 0, 0.30), 0 15px 12px rgba(0, 0, 0, 0.22);
-    }
-
-    h2 {
-      text-align: center;
-      margin-bottom: 50px;
-    }
-
-    h2 small {
-      padding-top: 10px;
-      font-weight: normal;
-      color: #888;
-      display: block;
-    }
-
-    .footer {
-      padding-top: 100px;
-      text-align: center;
+      background: url(https://hdqwalls.com/wallpapers/blur-background-6z.jpg) no-repeat center center fixed;
     }
   </style>
 </head>
 
 <body>
-<div class="container">
-    <h2>TumbleBot<small>Tumbledryer Monitoring System</small></h2>
-    <br>
-    <p>
-      <i class="fas fa-plug" style="color:#581845;"></i>
-      <span class="dht-labels"> Power stat: </span>
-      <span class="readings" id="status">%STATUS%</span>
-    </p>
-    <p>
-      <i class="fas fa-power-off" style="color:#581845;"></i>
-      <span class="dht-labels"> Cycle stat: </span>
-      <span class="readings" id="finished">%FINISHED%</span>
-    </p>
-    <p>
-      <i class="fas fa-microchip" style="color:#581845;"></i>
-      <span class="dht-labels">LDR Reading: </span>
-      <span class="readings" id="ldr">%LDR%</span>
-    </p>
-    <p>
-      <i class="fas fa-memory" style="color:#581845;"></i>
-      <span class="dht-labels">SW420 Reading: </span>
-      <span class="readings" id="sw420">%SW420%</span>
-    </p>
+  <div class='mt-5 mx-4'>
+    <div class='col-12 col-lg-5 col-md-5 container bg-light p-5 shadow'>
+      <div class='text-center'>
+        <h3>TumbleBot</h3>
+        <h6 class='text-muted font-italic font-weight-normal'>Tumble dryer monitoring system</h6>
+      </div>
       <br>
-      <p class="footer">An IoT device by Pierre Charles</p>
+      <div class='text-center'>
+      <div class='py-2'>
+        <i class="fas fa-plug" style="color:purple"></i>
+        <span> Power status: </span>
+        <span id="status" style="color:#004e86">%STATUS%</span>
+      </div>
+
+      <div class='py-2'>
+        <i class="fas fa-power-off" style="color: purple"></i>
+        <span> Cycle status: </span>
+        <span id="finished" style="color:#004e86">%FINISHED</span>
+      </div>
+
+      <div class='py-2'>
+        <i class="fas fa-user" style="color: purple"></i>
+        <span> Being used by: </span>
+        <span id="user" style="color:#004e86">Pierre</span>
+      </div>
+    </div>
+
+      <div class='row pt-5 text-center'>
+        <div class='col-md-5 col-5 text-center'>
+          <i class="fas fa-chart-area" style="color:purple"></i>
+          <small>LDR:</small>
+          <small id="ldr" style="color:#004e86">%LDR%</small>
+        </div>
+
+        <div class='col-md-5 col-5 text-center'>
+          <i class="fas fa-cogs" style="color:purple"></i>
+          <small>SW-420:</small>
+          <small id="sw420" style="color:#004e86">%SW420%</small>
+        </div>
+      </div>
+    </div>
   </div>
 </body>
 
@@ -239,9 +209,8 @@ setInterval(function ( ) {
 </script>
 </html>)rawText";
 
-// Replaces placeholder with DHT values
+// Replaces placeholder with selected values
 String processor(const String& var) {
-  //Serial.println(var);
   if (var == "LDR") {
     return readLDR();
   } else if (var == "SW420") {
@@ -259,7 +228,8 @@ String processor(const String& var) {
 void setup() {
   // Serial port for debugging purposes
   Serial.begin(115200);
-  initWiFi();
+  SPI.begin();      // Initiate  SPI bus
+  mfrc522.PCD_Init();   // Initiate MFRC522
   pinMode(blueLED, OUTPUT);
   pinMode(redLED, OUTPUT);
   pinMode(greenLED, OUTPUT);
@@ -268,6 +238,7 @@ void setup() {
   attachInterrupt(sw420, ISR, FALLING);
   lcd.begin();
   lcd.setFont(u8x8_font_chroma48medium8_r);
+  initWiFi();
 
   // Route for root / web page
   server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
