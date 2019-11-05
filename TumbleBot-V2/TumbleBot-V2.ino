@@ -46,7 +46,13 @@ volatile bool cardScanned = false; // for RFID
 AsyncWebServer server(80); // AsyncWebServer object on port 80
 
 String readStatus() {
-  return (flag ? "Running" : "Idle");
+  if (finished) {
+    return "Sleeping";
+  } else if (flag) {
+    return "Running";
+  } else if(!flag) {
+    return "Waiting";
+  }
 }
 
 String readUser() {
@@ -54,7 +60,12 @@ String readUser() {
 }
 
 String readIfFinished() {
-  return (finished ? "Finished" : "In Cycle");
+  if (flag) {
+    return "In Cycle";
+  } else if (finished) {
+    return "Finished";
+  } 
+  return "Idle";
 }
 
 String readSW420() {
@@ -135,7 +146,7 @@ const char* index_html = R"rawText(
       <div class='pt-4 text-center'>
       <div class='py-2'>
         <i class="fas fa-plug" style="color:purple"></i>
-        <span> Power status: </span>
+        <span> Dryer status: </span>
         <span id="status" style="color:#004e86">%STATUS%</span>
       </div>
 
@@ -180,7 +191,7 @@ setInterval(function ( ) {
   };
   xhttp.open("GET", "/ldr", true);
   xhttp.send();
-}, 5000);
+}, 3000);
 
 setInterval(function ( ) {
   var xhttp = new XMLHttpRequest();
@@ -191,7 +202,7 @@ setInterval(function ( ) {
   };
   xhttp.open("GET", "/sw420", true);
   xhttp.send();
-}, 5000) ;
+}, 3000) ;
 
 setInterval(function ( ) {
   var xhttp = new XMLHttpRequest();
@@ -202,7 +213,7 @@ setInterval(function ( ) {
   };
   xhttp.open("GET", "/status", true);
   xhttp.send();
-}, 5000);
+}, 3000);
 
 setInterval(function ( ) {
   var xhttp = new XMLHttpRequest();
@@ -213,7 +224,7 @@ setInterval(function ( ) {
   };
   xhttp.open("GET", "/finished", true);
   xhttp.send();
-}, 5000);
+}, 3000);
 
 setInterval(function ( ) {
   var xhttp = new XMLHttpRequest();
@@ -224,7 +235,7 @@ setInterval(function ( ) {
   };
   xhttp.open("GET", "/user", true);
   xhttp.send();
-}, 5000);
+}, 3000);
 
 </script>
 </html>)rawText";
@@ -276,10 +287,11 @@ void readRFID() {
   if (content.substring(1) == "82 BB B9 67") {
     Serial.println("Hello Pierre!");
     user = "Pierre";
-
   } else if (content.substring(1) == "49 93 05 4F") {
     Serial.println("Hello, Pierre!");
     user = "Pierre";
+  } else {
+    user = content;
   }
   cardScanned = true;
 
@@ -326,15 +338,16 @@ void setup() {
 
 void loop() {
   readRFID();
-  delay(2000);
   if (flag) {
     digitalWrite(greenLED, LOW);
     digitalWrite(blueLED, HIGH);
     lcd.drawString(0, 0, "Dryer is on!");
     Serial.println("DRYER IS ON");
     flag = false;
+  } else {
+    digitalWrite(blueLED, LOW);
   }
-    delay(2000);
+  delay(2000);
 
   if (!flag && (analogRead(ldr) < light_threshold)) {
     digitalWrite(blueLED, LOW);
