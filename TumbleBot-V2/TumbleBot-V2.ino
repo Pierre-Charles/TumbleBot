@@ -1,9 +1,24 @@
+#include <FirebaseESP32.h>
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <U8x8lib.h>
 #include <HTTPClient.h>
 #include <SPI.h>
 #include <MFRC522.h>
+
+#define FIREBASE_HOST "tumblebot-d43f6.firebaseio.com"
+#define FIREBASE_AUTH "wNVmE1zoQB48UmIKiOKooCp9A820v9QQzIGNgBH3"
+#define WIFI_SSID "VladimirRoutin"
+#define WIFI_PASSWORD "jn3qvGncNbn8"
+
+//Define FirebaseESP32 data object
+FirebaseData firebaseData;
+
+FirebaseJson json;
+
+void printResult(FirebaseData &data);
+
+String path = "/object";
 
 U8X8_SSD1306_128X64_NONAME_SW_I2C lcd(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16); // Create LCD instance
 
@@ -12,9 +27,6 @@ MFRC522 mfrc522(21, 4); // Create MFRCC522 instance
 WiFiClient client;
 WiFiServer servero(80);
 String header;
-
-const char* ssid = "VladimirRoutin";
-const char* password = "jn3qvGncNbn8";
 
 const char* authKey = "eh7LRYUr0zctT7d7GceXajmodzrcn19H__wbezBKHFs";
 
@@ -29,8 +41,10 @@ const int sw420 = 35;
 // For LDR
 const int ldr = 34;
 int light_value = 0;
-//int light_threshold = 3700;
-int light_threshold = 500;
+//int light_threshold = 3800;
+//int light_threshold = 500;
+int light_threshold = 1;
+
 
 
 int messageSent = 0;
@@ -47,48 +61,58 @@ AsyncWebServer server(80); // AsyncWebServer object on port 80
 
 String readStatus() {
   if (finished) {
+    Firebase.setString(firebaseData, path + "/dryerStatus", "Sleeping");
     return "Sleeping";
   } else if (flag) {
+    Firebase.setString(firebaseData, path + "/dryerStatus", "Running");
     return "Running";
-  } else if(!flag) {
+  } else if (!flag) {
+    Firebase.setString(firebaseData, path + "/dryerStatus", "Waiting");
     return "Waiting";
   }
 }
 
 String readUser() {
+  Firebase.setString(firebaseData, path + "/user", cardScanned ? user : "Nobody");
   return (cardScanned ? String(user) : "Nobody");
 }
 
 String readIfFinished() {
   if (flag) {
+    Firebase.setString(firebaseData, path + "/cycleStatus", "In Cycle");
     return "In Cycle";
   } else if (finished) {
+    Firebase.setString(firebaseData, path + "/cycleStatus", "Finished");
     return "Finished";
-  } 
+  }
+  Firebase.setString(firebaseData, path + "/cycleStatus", "Idle");
   return "Idle";
 }
 
 String readSW420() {
   long measurement = pulseIn(sw420, HIGH);
   Serial.println("Reading from SW-420: " + String(measurement));
+  Firebase.setInt(firebaseData, path + "/sw420", measurement);
   return String(measurement);
 }
 
 String readLDR() {
   light_value = analogRead(ldr);
   Serial.println("Reading from LDR: " + String(light_value));
+  Firebase.setInt(firebaseData, path + "/ldr", light_value);
   return String(light_value);
 }
 
 void ISR() {
   flag = true;
   dryerStat = true;
+  messageSent = 0;
 }
 
 void initWiFi() {
   Serial.print("Connecting to ");
-  Serial.println(ssid);
-  WiFi.begin(ssid, password);
+  Serial.println(WIFI_SSID);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -301,6 +325,7 @@ void setup() {
   // Serial port for debugging purposes
   Serial.begin(115200);
   initWiFi();
+  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
   SPI.begin();      // Initiate  SPI bus
   mfrc522.PCD_Init();   // Initiate MFRC522
   pinMode(blueLED, OUTPUT);
@@ -353,6 +378,7 @@ void loop() {
     digitalWrite(blueLED, LOW);
     digitalWrite(greenLED, HIGH);
     dryerStat = false;
+    lcd.clear();
     lcd.drawString(0, 0, "Dryer is done!");
     Serial.println("Tumble Dryer has finished!");
     finished = true;
