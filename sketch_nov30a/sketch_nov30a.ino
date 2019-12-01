@@ -37,12 +37,12 @@ const int blueLED = 14;
 
 // For SW-420
 const int sw420 = 35;
+long sw420Value = 0;
 
 // For LDR
 const int ldr = 34;
 int light_value = 0;
-//int light_threshold = 3800;
-int light_threshold = 500;
+int light_threshold = 3800;
 
 int messageSent = 0;
 
@@ -58,61 +58,35 @@ AsyncWebServer server(80); // AsyncWebServer object on port 80
 
 String readStatus() {
   if (finished) {
-    Firebase.setString(firebaseData, path + "/dryerStatus", "Sleeping");
-    delay(5000);
     return "Sleeping";
   } else if (flag) {
-    delay(5000);
-    Firebase.setString(firebaseData, path + "/dryerStatus", "Running");
     return "Running";
   } else if (!flag) {
-    Firebase.setString(firebaseData, path + "/dryerStatus", "Waiting");
-    delay(5000);
     return "Waiting";
   }
 }
 
 String readUser() {
-  Firebase.setString(firebaseData, path + "/user", cardScanned ? user : "Nobody");
   return (cardScanned ? String(user) : "Nobody");
-  delay(5000);
-
 }
 
 String readIfFinished() {
   if (flag) {
-    Firebase.setString(firebaseData, path + "/cycleStatus", "In Cycle");
     return "In Cycle";
-    delay(5000);
-
   } else if (finished) {
-    Firebase.setString(firebaseData, path + "/cycleStatus", "Finished");
     return "Finished";
-    delay(5000);
-
   }
-  Firebase.setString(firebaseData, path + "/cycleStatus", "Idle");
   return "Idle";
-  delay(5000);
-
 }
 
 String readSW420() {
-  long measurement = pulseIn(sw420, HIGH);
-  Serial.println("Reading from SW-420: " + String(measurement));
-  Firebase.setInt(firebaseData, path + "/sw420", measurement);
-  return String(measurement);
-  delay(5000);
-
+  Serial.println("Reading from SW-420: " + String(sw420Value));
+  return String(sw420Value);
 }
 
 String readLDR() {
-  light_value = analogRead(ldr);
   Serial.println("Reading from LDR: " + String(light_value));
-  Firebase.setInt(firebaseData, path + "/ldr", light_value);
   return String(light_value);
-  delay(5000);
-
 }
 
 void ISR() {
@@ -227,7 +201,7 @@ setInterval(function ( ) {
   };
   xhttp.open("GET", "/ldr", true);
   xhttp.send();
-}, 5000);
+}, 3000);
 
 setInterval(function ( ) {
   var xhttp = new XMLHttpRequest();
@@ -238,7 +212,7 @@ setInterval(function ( ) {
   };
   xhttp.open("GET", "/sw420", true);
   xhttp.send();
-}, 5000) ;
+}, 3000) ;
 
 setInterval(function ( ) {
   var xhttp = new XMLHttpRequest();
@@ -249,7 +223,7 @@ setInterval(function ( ) {
   };
   xhttp.open("GET", "/status", true);
   xhttp.send();
-}, 5000);
+}, 3000);
 
 setInterval(function ( ) {
   var xhttp = new XMLHttpRequest();
@@ -260,7 +234,7 @@ setInterval(function ( ) {
   };
   xhttp.open("GET", "/finished", true);
   xhttp.send();
-}, 5000);
+}, 3000);
 
 setInterval(function ( ) {
   var xhttp = new XMLHttpRequest();
@@ -271,7 +245,7 @@ setInterval(function ( ) {
   };
   xhttp.open("GET", "/user", true);
   xhttp.send();
-}, 5000);
+}, 3000);
 
 </script>
 </html>)rawText";
@@ -333,6 +307,59 @@ void readRFID() {
 
 }
 
+
+void checkDryerTask(void * param) {
+  while (1) {
+    if (flag) {
+      digitalWrite(greenLED, LOW);
+      digitalWrite(blueLED, HIGH);
+      lcd.drawString(0, 0, "Dryer is on!");
+      Serial.println("DRYER IS ON");
+      flag = false;
+    } else {
+      digitalWrite(blueLED, LOW);
+    }
+    vTaskDelay(200);
+  }
+}
+
+void updateSensorsTask(void * param) {
+  while (1) {
+    sw420Value = pulseIn(sw420, HIGH);
+    light_value = analogRead(ldr);
+    vTaskDelay(200);
+  }
+}
+
+void updateFirebase(void * param) {
+  while (1) {
+    if (finished) {
+      Firebase.setString(firebaseData, path + "/dryerStatus", "Sleeping");
+    } else if (flag && !finished) {
+      Firebase.setString(firebaseData, path + "/dryerStatus", "Running");
+    } else {
+      Firebase.setString(firebaseData, path + "/dryerStatus", "Waiting");
+    }
+
+    if (cardScanned) {
+      Firebase.setString(firebaseData, path + "/user", user);
+    } else {
+      Firebase.setString(firebaseData, path + "/user", "N/A");
+    }
+
+    if (flag && !finished) {
+      Firebase.setString(firebaseData, path + "/cycleStatus", "In Cycle");
+    } else if (finished) {
+      Firebase.setString(firebaseData, path + "/cycleStatus", "Finished");
+    }
+
+    Firebase.setInt(firebaseData, path + "/sw420", sw420Value);
+    Firebase.setInt(firebaseData, path + "/ldr", light_value);
+
+    vTaskDelay(5000);
+  }
+}
+
 void setup() {
   // Serial port for debugging purposes
   Serial.begin(115200);
@@ -371,23 +398,15 @@ void setup() {
 
   // Start server
   server.begin();
+
+  xTaskCreate(checkDryerTask, "checkDryerTask", 2000, NULL, 1, NULL);
+  xTaskCreate(updateSensorsTask, "updateSensorsTask", 3000, NULL, 1, NULL);
+  xTaskCreate(updateFirebase, "updateFirebase", 3000, NULL, 1, NULL);
+
 }
 
 void loop() {
   readRFID();
-    delay(2000);
-
-  if (flag) {
-    digitalWrite(greenLED, LOW);
-    digitalWrite(blueLED, HIGH);
-    lcd.drawString(0, 0, "Dryer is on!");
-    Serial.println("DRYER IS ON");
-    flag = false;
-  } else {
-    digitalWrite(blueLED, LOW);
-  }
-  delay(2000);
-
   if (!flag && (analogRead(ldr) < light_threshold)) {
     digitalWrite(blueLED, LOW);
     digitalWrite(greenLED, HIGH);
@@ -401,12 +420,12 @@ void loop() {
       Serial.println("Connecting to IFTTT");
       if (client.connect("maker.ifttt.com", 80))
       {
-        telegramTrigger();
+        //telegramTrigger();
         Serial.println("Connecting to Amazon Echo Dot");
-        notifyMyEcho();
+        //notifyMyEcho();
         messageSent++;
       }
     }
-    delay(2000);
+    vTaskDelay(2000);
   }
 }
