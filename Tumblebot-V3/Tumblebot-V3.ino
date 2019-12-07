@@ -4,6 +4,8 @@
 #include <HTTPClient.h>
 #include <SPI.h>
 #include <MFRC522.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
 
 #define FIREBASE_HOST "tumblebot-d43f6.firebaseio.com"
 #define FIREBASE_AUTH "wNVmE1zoQB48UmIKiOKooCp9A820v9QQzIGNgBH3"
@@ -13,11 +15,7 @@
 
 //Define FirebaseESP32 data object
 FirebaseData firebaseData;
-
 FirebaseJson json;
-
-void printResult(FirebaseData &data);
-
 String path = "/object";
 
 U8X8_SSD1306_128X64_NONAME_SW_I2C lcd(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 16); // Create LCD instance
@@ -25,6 +23,14 @@ U8X8_SSD1306_128X64_NONAME_SW_I2C lcd(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 
 MFRC522 mfrc522(21, 4); // Create MFRCC522 instance
 
 WiFiClient client;
+
+// Define NTP Client to get time
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP);
+
+String formattedDate;
+String dateTime;
+
 
 // For LEDs
 const int redLED = 13;
@@ -36,13 +42,15 @@ const int sw420 = 35;
 
 // For LDR
 const int ldr = 34;
-//int light_threshold = 3800;
-int light_threshold = 2000;
+int light_threshold = 3800;
 
 int messageSent = 0;
 
+
 String user = "";
 
+volatile bool startTimeLogged = false;
+volatile bool endTimeLogged = false;
 volatile bool flag = false;
 volatile bool dryerStat = false; // For web page to show if its running or idle
 volatile bool finished = false; // for web page to show if its finished or in still progress
@@ -69,7 +77,7 @@ void readUser() {
   }
 }
 
-String readIfFinished() {
+void readIfFinished() {
   if (flag && !finished) {
     Firebase.setString(firebaseData, path + "/cycleStatus", "In Cycle");
   } else if (finished) {
@@ -85,14 +93,13 @@ void readSW420() {
 
 void readLDR() {
   long light_value = analogRead(ldr);
-  String light = (light_value < 4095) ? "ON" : "OFF";
+  String light = (light_value < light_threshold) ? "ON" : "OFF";
   Serial.println("Reading from LDR: " + String(light_value));
   Firebase.setString(firebaseData, path + "/ldr", light);
 }
 
 void ISR() {
   flag = true;
-  messageSent = 0;
 }
 
 void initWiFi() {
@@ -128,6 +135,26 @@ void notifyMyEcho() {
   http.end();
 }
 
+void getStartDateTime() {
+  while (!timeClient.update()) {
+    timeClient.forceUpdate();
+  }
+  formattedDate = timeClient.getFormattedDate();
+  //dateTime = formattedDate.substr(0, formattedDate.length() - 1);
+  Serial.println(formattedDate);
+  Firebase.setString(firebaseData, path + "/cycleStartTime", formattedDate);
+}
+
+void getEndDateTime() {
+  while (!timeClient.update()) {
+    timeClient.forceUpdate();
+  }
+  formattedDate = timeClient.getFormattedDate();
+  //dateTime = formattedDate.substr(0, formattedDate.length() - 1);
+  Serial.println(formattedDate);
+  Firebase.setString(firebaseData, path + "/cycleEndTime", formattedDate);
+}
+
 void readRFID() {
   // Look for new cards
   if (!mfrc522.PICC_IsNewCardPresent()) {
@@ -160,7 +187,7 @@ void readRFID() {
   } else if (content.substring(1) == "49 93 05 4F") {
     Serial.println("Hello, Pierre!");
     user = "Pierre";
-    } else if (content.substring(1) == "49 D5 CC A3") {
+  } else if (content.substring(1) == "49 D5 CC A3") {
     Serial.println("Hello, Pierre!");
     user = "Pierre";
   } else {
@@ -192,6 +219,9 @@ void setup() {
   Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
   SPI.begin();      // Initiate  SPI bus
   mfrc522.PCD_Init();   // Initiate MFRC522
+  // Initialize a NTPClient to get time
+  timeClient.begin();
+  timeClient.setTimeOffset(0);
   pinMode(yellowLED, OUTPUT);
   pinMode(redLED, OUTPUT);
   pinMode(greenLED, OUTPUT);
@@ -201,13 +231,20 @@ void setup() {
   lcd.begin();
   lcd.setFont(u8x8_font_8x13B_1x2_f);
   lcd.drawString(0, 0, "TumbleBot is on!");
+  Firebase.setString(firebaseData, path + "/dryerStatus", "Waiting");
+  Firebase.setString(firebaseData, path + "/cycleStatus", "Idle");
+  Firebase.setString(firebaseData, path + "/user", "N/A");
 }
 
 void loop() {
   while (WiFi.status() != WL_CONNECTED) {
-  initWiFi();
+    initWiFi();
   }
-  
+
+  if ( flag && startTimeLogged == false) {
+    getStartDateTime();
+    startTimeLogged = true;
+  }
   readRFID();
   readSW420();
   readLDR();
@@ -242,6 +279,7 @@ void loop() {
         telegramTrigger();
         Serial.println("Connecting to Amazon Echo Dot");
         notifyMyEcho();
+        getEndDateTime();
         messageSent++;
       }
     }
