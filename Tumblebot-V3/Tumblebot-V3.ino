@@ -7,8 +7,9 @@
 
 #define FIREBASE_HOST "tumblebot-d43f6.firebaseio.com"
 #define FIREBASE_AUTH "wNVmE1zoQB48UmIKiOKooCp9A820v9QQzIGNgBH3"
-#define WIFI_SSID "VladimirRoutin"
+#define WIFI_SSID "VladimirComputin"
 #define WIFI_PASSWORD "jn3qvGncNbn8"
+#define authKey "eh7LRYUr0zctT7d7GceXajmodzrcn19H__wbezBKHFs"
 
 //Define FirebaseESP32 data object
 FirebaseData firebaseData;
@@ -24,8 +25,6 @@ U8X8_SSD1306_128X64_NONAME_SW_I2C lcd(/* clock=*/ 15, /* data=*/ 4, /* reset=*/ 
 MFRC522 mfrc522(21, 4); // Create MFRCC522 instance
 
 WiFiClient client;
-
-const char* authKey = "eh7LRYUr0zctT7d7GceXajmodzrcn19H__wbezBKHFs";
 
 // For LEDs
 const int redLED = 13;
@@ -52,7 +51,7 @@ volatile bool cardScanned = false; // for RFID
 volatile bool hasStarted = false;
 volatile bool hasFinished = false;
 
-String readStatus() {
+void readStatus() {
   if (finished) {
     Firebase.setString(firebaseData, path + "/dryerStatus", "Sleeping");
   } else if (flag && !finished) {
@@ -62,7 +61,7 @@ String readStatus() {
   }
 }
 
-String readUser() {
+void readUser() {
   if (cardScanned) {
     Firebase.setString(firebaseData, path + "/user", user);
   } else {
@@ -78,16 +77,17 @@ String readIfFinished() {
   }
 }
 
-String readSW420() {
+void readSW420() {
   long measurement = pulseIn(sw420, HIGH);
   Serial.println("Reading from SW-420: " + String(measurement));
   Firebase.setInt(firebaseData, path + "/sw420", measurement);
 }
 
-String readLDR() {
+void readLDR() {
   long light_value = analogRead(ldr);
+  String light = (light_value < 4095) ? "ON" : "OFF";
   Serial.println("Reading from LDR: " + String(light_value));
-  Firebase.setInt(firebaseData, path + "/ldr", light_value);
+  Firebase.setString(firebaseData, path + "/ldr", light);
 }
 
 void ISR() {
@@ -144,9 +144,9 @@ void readRFID() {
   String content = "";
   byte letter;
   for (byte i = 0; i < mfrc522.uid.size; i++) {
-    Serial.print(mfrc522.uid.uidByte[i] < 0x10 ? "0" : " ");
+    Serial.print(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " ");
     Serial.print(mfrc522.uid.uidByte[i], HEX);
-    content.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? "0" : " "));
+    content.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " "));
     content.concat(String(mfrc522.uid.uidByte[i], HEX));
   }
 
@@ -158,6 +158,9 @@ void readRFID() {
     Serial.println("Hello Pierre!");
     user = "Pierre";
   } else if (content.substring(1) == "49 93 05 4F") {
+    Serial.println("Hello, Pierre!");
+    user = "Pierre";
+    } else if (content.substring(1) == "49 D5 CC A3") {
     Serial.println("Hello, Pierre!");
     user = "Pierre";
   } else {
@@ -175,7 +178,17 @@ void readRFID() {
 void setup() {
   // Serial port for debugging purposes
   Serial.begin(115200);
-  initWiFi();
+  Serial.print("Connecting to ");
+  Serial.println(WIFI_SSID);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected.");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
   Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
   SPI.begin();      // Initiate  SPI bus
   mfrc522.PCD_Init();   // Initiate MFRC522
@@ -191,6 +204,10 @@ void setup() {
 }
 
 void loop() {
+  while (WiFi.status() != WL_CONNECTED) {
+  initWiFi();
+  }
+  
   readRFID();
   readSW420();
   readLDR();
