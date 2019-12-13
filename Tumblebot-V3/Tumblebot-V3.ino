@@ -87,8 +87,9 @@ void readIfFinished() {
 
 void readSW420() {
   long measurement = pulseIn(sw420, HIGH);
+  String vibration = (measurement > 0) ? "ON" : "OFF";
   Serial.println("Reading from SW-420: " + String(measurement));
-  Firebase.setInt(firebaseData, path + "/sw420", measurement);
+  Firebase.setString(firebaseData, path + "/sw420", vibration);
 }
 
 void readLDR() {
