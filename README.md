@@ -13,3 +13,4 @@ Software used for IoT system:
   - ReactJS for front-end UI - [ReactJS docs](https://reactjs.org/)
   - IFTTT for triggering events with Telegram - [IFTTT](https://ifttt.com/)
   - Notify Me for sending notifications to Amazon Echo devices - [Notify Me](https://www.thomptronics.com/about/notify-me)
+  
