@@ -7,11 +7,11 @@
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 
-#define FIREBASE_HOST "tumblebot-d43f6.firebaseio.com"
-#define FIREBASE_AUTH "wNVmE1zoQB48UmIKiOKooCp9A820v9QQzIGNgBH3"
-#define WIFI_SSID "pierre"
-#define WIFI_PASSWORD "LinuxPenguin97"
-#define authKey "eh7LRYUr0zctT7d7GceXajmodzrcn19H__wbezBKHFs"
+#define FIREBASE_HOST "" // insert FireBase Host ID
+#define FIREBASE_AUTH "" // insert FireBase Auth ID
+#define WIFI_SSID "" // insert SSID
+#define WIFI_PASSWORD "" // insert password
+#define authKey "" // insert IFTTT API key
 
 //Define FirebaseESP32 data object
 FirebaseData firebaseData;
